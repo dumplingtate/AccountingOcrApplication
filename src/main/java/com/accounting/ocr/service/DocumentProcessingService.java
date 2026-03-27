@@ -1,5 +1,6 @@
 package com.accounting.ocr.service;
 
+
 import com.accounting.ocr.dto.DocumentResponse;
 import com.accounting.ocr.dto.ValidationError;
 import com.accounting.ocr.exception.DocumentProcessingException;
@@ -9,7 +10,6 @@ import com.accounting.ocr.repository.DocumentRepository;
 import com.accounting.ocr.service.ml.MLServiceClient;
 import com.accounting.ocr.service.ml.dto.MLResponse;
 import com.accounting.ocr.service.validation.ExtractedFieldsValidator;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,7 +30,7 @@ public class DocumentProcessingService {
     private final DocumentRepository documentRepository;
     private final CounterpartyRepository counterpartyRepository;
     private final ExtractedFieldsValidator fieldsValidator;
-    private final ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public DocumentResponse processDocument(MultipartFile file, String description) {
         log.info("Starting document processing for file: {}", file.getOriginalFilename());
@@ -52,8 +52,10 @@ public class DocumentProcessingService {
             mlResponse = mlServiceClient.classifyDocument(fileId);
 
             // Store raw ML response
-            document.setRawMlResponse(objectMapper.writeValueAsString(mlResponse));
-            document.setExtractedText(mlResponse.getRawText());
+            if (mlResponse != null) {
+                document.setRawMlResponse(objectMapper.writeValueAsString(mlResponse));
+                document.setExtractedText(mlResponse.getRawText());
+            }
 
         } catch (Exception e) {
             log.error("ML processing failed for document: {}", fileId, e);
@@ -63,21 +65,24 @@ public class DocumentProcessingService {
         }
 
         // Step 4: Validate extracted data
-        List<ValidationError> validationErrors = fieldsValidator.validate(mlResponse);
+        if (mlResponse != null) {
+            List<ValidationError> validationErrors = fieldsValidator.validate(mlResponse);
 
-        if (!validationErrors.isEmpty()) {
-            log.warn("Validation failed for document {}. Errors: {}", fileId, validationErrors);
-            document.setStatus(ProcessingStatus.VALIDATION_FAILED);
-            document.setErrorMessage("Validation failed: " + validationErrors.toString());
-            documentRepository.save(document);
-            throw new DocumentProcessingException("Validation failed: " + validationErrors);
+            if (!validationErrors.isEmpty()) {
+                log.warn("Validation failed for document {}. Errors: {}", fileId, validationErrors);
+                document.setStatus(ProcessingStatus.VALIDATION_FAILED);
+                document.setErrorMessage("Validation failed: " + validationErrors.toString());
+                documentRepository.save(document);
+                throw new DocumentProcessingException("Validation failed: " + validationErrors);
+            }
+
+            // Step 5: Find or create counterparty
+            Counterparty counterparty = findOrCreateCounterparty(mlResponse);
+
+            // Step 6: Update document with extracted data
+            updateDocumentWithMlData(document, mlResponse, counterparty);
         }
 
-        // Step 5: Find or create counterparty
-        Counterparty counterparty = findOrCreateCounterparty(mlResponse);
-
-        // Step 6: Update document with extracted data
-        updateDocumentWithMlData(document, mlResponse, counterparty);
         document.markProcessed();
         document = documentRepository.save(document);
 
@@ -91,7 +96,7 @@ public class DocumentProcessingService {
         Document document = new Document();
         document.setOriginalFileName(file.getOriginalFilename());
         document.setFileId(fileId);
-        document.setStoragePath(fileStorageService.getFilePath(fileId).toString());
+        document.setStoragePath("./uploads/" + fileId);
         document.setFileSize(file.getSize());
         document.setStatus(ProcessingStatus.UPLOADED);
         document.setDocumentType(DocumentType.UNKNOWN);
@@ -114,7 +119,9 @@ public class DocumentProcessingService {
     }
 
     private void updateDocumentWithMlData(Document document, MLResponse mlResponse, Counterparty counterparty) {
-        document.setDocumentType(mlResponse.getDocumentType());
+        if (mlResponse.getDocumentType() != null) {
+            document.setDocumentType(mlResponse.getDocumentType());
+        }
         document.setDocumentNumber(mlResponse.getDocumentNumber());
         document.setDocumentDate(mlResponse.getDocumentDate());
         document.setTotalAmount(mlResponse.getTotalAmount());

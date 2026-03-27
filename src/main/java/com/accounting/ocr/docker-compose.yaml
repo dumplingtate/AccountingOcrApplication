@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: ocr-postgres
+    environment:
+      POSTGRES_DB: ocrdb
+      POSTGRES_USER: ocruser
+      POSTGRES_PASSWORD: ocrpass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - ocr-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ocruser -d ocrdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Python ML Service
+  ml-service:
+    build: ./ml-service
+    container_name: ocr-ml-service
+    environment:
+      - TESSDATA_PREFIX=/usr/share/tesseract-ocr/4.00/tessdata
+    ports:
+      - "5001:5001"
+    volumes:
+      - ./ml-service:/app
+      - uploads_data:/app/uploads
+    networks:
+      - ocr-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Java Spring Boot Application
+  java-app:
+    build: .
+    container_name: ocr-java-app
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/ocrdb
+      - SPRING_DATASOURCE_USERNAME=ocruser
+      - SPRING_DATASOURCE_PASSWORD=ocrpass
+      - ML_SERVICE_URL=http://ml-service:5001
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ml-service:
+        condition: service_healthy
+    volumes:
+      - uploads_data:/uploads
+    networks:
+      - ocr-network
+
+volumes:
+  postgres_data:
+  uploads_data:
+
+networks:
+  ocr-network:
+    driver: bridge

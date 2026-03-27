@@ -8,6 +8,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.UUID;
 
@@ -15,7 +16,7 @@ import java.util.UUID;
 @Service
 public class FileStorageService {
 
-    @Value("${file.upload-dir}")
+    @Value("${file.upload-dir:./uploads}")
     private String uploadDir;
 
     @Value("${file.max-size:10485760}")
@@ -23,19 +24,21 @@ public class FileStorageService {
 
     public String storeFile(MultipartFile file) {
         try {
-            // Validate file
             validateFile(file);
 
-            // Generate unique filename
             String fileId = UUID.randomUUID().toString();
             String originalFilename = file.getOriginalFilename();
             String extension = getFileExtension(originalFilename);
             String storedFilename = fileId + (extension.isEmpty() ? "" : "." + extension);
 
-            // Create target path
-            Path targetPath = Path.of(uploadDir, storedFilename);
+            // Создаем директорию если не существует
+            Path uploadPath = Paths.get(uploadDir);
+            if (!Files.exists(uploadPath)) {
+                Files.createDirectories(uploadPath);
+                log.info("Created upload directory: {}", uploadDir);
+            }
 
-            // Copy file
+            Path targetPath = uploadPath.resolve(storedFilename);
             Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
 
             log.info("File stored successfully: {} -> {}", originalFilename, storedFilename);
@@ -49,9 +52,9 @@ public class FileStorageService {
     }
 
     public Path getFilePath(String fileId) {
-        // Find file by ID (scan directory)
         try {
-            return Files.list(Path.of(uploadDir))
+            Path uploadPath = Paths.get(uploadDir);
+            return Files.list(uploadPath)
                     .filter(path -> path.getFileName().toString().startsWith(fileId))
                     .findFirst()
                     .orElseThrow(() -> new DocumentProcessingException("File not found: " + fileId));
@@ -77,7 +80,8 @@ public class FileStorageService {
 
         if (file.getSize() > maxFileSize) {
             throw new DocumentProcessingException(
-                    String.format("File size exceeds maximum allowed size: %d bytes", maxFileSize)
+                    String.format("File size exceeds maximum allowed size: %d bytes (max: %d bytes)",
+                            file.getSize(), maxFileSize)
             );
         }
 
