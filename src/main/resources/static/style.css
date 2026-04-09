@@ -115,3 +115,33 @@ pre {
     max-height: 200px;
     overflow: auto;
 }
+
+.counterparties-status {
+    margin: 8px 0;
+    font-size: 14px;
+    opacity: 0.9;
+}
+
+.btn-inline {
+    width: auto;
+    display: inline-block;
+    margin-bottom: 12px;
+}
+
+.counterparties-table-wrap {
+    overflow-x: auto;
+}
+
+.cp-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #F5EFFF;
+}
+
+.cp-table th,
+.cp-table td {
+    border: 1px solid #CDC1FF;
+    padding: 8px 10px;
+    text-align: left;
+    font-size: 14px;
+}

@@ -24,6 +24,7 @@
         <p>Загрузка документов</p>
         <button class="menu-btn" onclick="showMainScreen()">Обработка</button>
         <button class="menu-btn" onclick="showDocumentsScreen()">Список документов</button>
+        <button class="menu-btn" onclick="showCounterpartiesScreen()">Контрагенты</button>
     </aside>
 
     <main class="main">
@@ -56,6 +57,15 @@
             <div class="card documents-list">
                 <h3>Добавленные документы</h3>
                 <div id="documentsList"></div>
+            </div>
+        </div>
+
+        <div id="counterparties-screen" class="content hidden">
+            <div class="card documents-list">
+                <h3>Контрагенты</h3>
+                <p id="counterpartiesStatus" class="counterparties-status"></p>
+                <button type="button" class="btn-inline" onclick="loadCounterparties()">Обновить список</button>
+                <div id="counterpartiesTableWrap" class="counterparties-table-wrap"></div>
             </div>
         </div>
 
