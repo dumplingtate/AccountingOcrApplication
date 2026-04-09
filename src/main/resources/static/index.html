@@ -22,6 +22,8 @@
     <aside class="sidebar">
         <h2>OCR</h2>
         <p>Загрузка документов</p>
+        <button class="menu-btn" onclick="showMainScreen()">Обработка</button>
+        <button class="menu-btn" onclick="showDocumentsScreen()">Список документов</button>
     </aside>
 
     <main class="main">
@@ -30,7 +32,7 @@
             <h1>Обработка документа</h1>
         </div>
 
-        <div class="content">
+        <div id="main-screen" class="content">
 
             <div class="card upload">
                 <h3>Загрузить файл</h3>
@@ -48,6 +50,13 @@
                 <pre id="raw"></pre>
             </div>
 
+        </div>
+
+        <div id="documents-screen" class="content hidden">
+            <div class="card documents-list">
+                <h3>Добавленные документы</h3>
+                <div id="documentsList"></div>
+            </div>
         </div>
 
     </main>

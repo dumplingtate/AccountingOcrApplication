@@ -24,6 +24,12 @@ body {
     padding: 20px;
 }
 
+.menu-btn {
+    margin-top: 10px;
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
 .main {
     flex: 1;
     display: flex;
@@ -56,6 +62,17 @@ body {
 
 .result {
     flex: 1;
+}
+
+.documents-list {
+    width: 100%;
+}
+
+.doc-item {
+    background: #CDC1FF;
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 10px;
 }
 
 .result-grid {
