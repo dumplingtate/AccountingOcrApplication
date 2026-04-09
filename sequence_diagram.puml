@@ -1,0 +1,101 @@
+@startuml
+!theme plain
+title "Диаграмма последовательности – обработка документа (загрузка → распознавание → сохранение)"
+
+actor "Пользователь" as Client
+participant "DocumentController\n(Spring)" as Controller
+participant "DocumentProcessingService" as ProcessingService
+participant "FileStorageService" as FileStorage
+participant "MLServiceClient" as MLClient
+participant "MLService\n(FastAPI)" as MLService
+participant "DocumentRepository" as DocRepo
+participant "CounterpartyRepository" as CpRepo
+database "База данных" as DB
+
+Client -> Controller: POST /documents/upload\n(file, metadata)
+activate Controller
+
+Controller -> ProcessingService: processDocument(file, fileId)
+activate ProcessingService
+
+ProcessingService -> FileStorage: saveFile(file, fileId)
+activate FileStorage
+FileStorage --> ProcessingService: storagePath
+deactivate FileStorage
+
+ProcessingService -> DocRepo: save(new Document(status=UPLOADED))
+activate DocRepo
+DocRepo --> DB: insert
+DB --> DocRepo: ok
+DocRepo --> ProcessingService: Document entity
+deactivate DocRepo
+
+ProcessingService -> MLClient: classifyDocument(fileBytes, fileId, debug=false)
+activate MLClient
+
+MLClient -> MLService: POST /classify\n(multipart/form-data)
+activate MLService
+
+note right of MLService
+  Внутри MLService:
+  1. Предобработка изображения
+     (ImagePreprocessor)
+  2. OCR через Tesseract
+     (OCREngine)
+  3. Классификация типа документа
+     (DocumentClassifier)
+  4. Извлечение реквизитов
+     (FieldExtractor)
+end note
+
+MLService --> MLClient: ClassificationResponse\n(documentType, confidence,\n documentNumber, documentDate,\n totalAmount, counterpartyName,\n counterpartyInn, counterpartyKpp,\n rawText, ...)
+deactivate MLService
+
+MLClient --> ProcessingService: ClassificationResponse
+deactivate MLClient
+
+ProcessingService -> ProcessingService: validateExtractedFields(response)
+note right: Проверка ИНН (10/12 цифр),\nКПП (9 цифр),\nналичие обязательных полей
+
+alt Валидация успешна
+    ProcessingService -> CpRepo: findByInn(counterpartyInn)
+    activate CpRepo
+    CpRepo --> DB: select
+    DB --> CpRepo: Counterparty (или null)
+    CpRepo --> ProcessingService: existing or null
+    deactivate CpRepo
+
+    alt Контрагент не найден
+        ProcessingService -> CpRepo: save(new Counterparty(...))
+        activate CpRepo
+        CpRepo --> DB: insert
+        DB --> CpRepo: Counterparty with id
+        CpRepo --> ProcessingService: savedCounterparty
+        deactivate CpRepo
+    end
+
+    ProcessingService -> DocRepo: update Document\n(set documentType, documentNumber,\n documentDate, totalAmount,\n counterparty, status=PROCESSED,\n extractedText, rawMlResponse)
+    activate DocRepo
+    DocRepo --> DB: update
+    DB --> DocRepo: ok
+    DocRepo --> ProcessingService: updated Document
+    deactivate DocRepo
+
+    ProcessingService --> Controller: DocumentResponse (success)
+    Controller --> Client: 200 OK + данные документа
+
+else Валидация не пройдена
+    ProcessingService -> DocRepo: update Document\n(set status=VALIDATION_FAILED,\n errorMessage, processedAt)
+    activate DocRepo
+    DocRepo --> DB: update
+    DB --> DocRepo: ok
+    deactivate DocRepo
+
+    ProcessingService --> Controller: DocumentResponse (with warnings)
+    Controller --> Client: 200 OK + предупреждения
+end
+
+deactivate ProcessingService
+deactivate Controller
+
+@enduml

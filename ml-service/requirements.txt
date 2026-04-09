@@ -1,0 +1,15 @@
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+pytesseract==0.3.10
+opencv-python==4.8.1.78
+Pillow==10.1.0
+numpy==1.24.3
+pydantic==2.5.0
+python-dateutil==2.8.2
+
+
+#C:\Users\tatiana\IdeaProjects\AccountingOcrApplication\ml-service
+#C:\Users\tatiana\AppData\Local\Programs\Python\Python313\python.exe
+# py -m pip install --upgrade pip
+# py -m pip install -r requirements.txt

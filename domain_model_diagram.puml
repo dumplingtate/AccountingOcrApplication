@@ -1,0 +1,131 @@
+@startuml
+!theme plain
+skinparam class {
+  BackgroundColor White
+  BorderColor Black
+  ArrowColor Black
+}
+skinparam enum {
+  BackgroundColor LightYellow
+  BorderColor Black
+}
+title "Модель предметной области системы распознавания и классификации документов"
+
+' ========== СУЩНОСТИ ==========
+
+class Counterparty {
+  ..
+  Основные атрибуты
+  ..
+  - id: Long (PK)
+  - inn: String (unique, 10‑12 цифр)
+  - kpp: String (9 цифр)
+  - name: String
+  - legalAddress: String
+  - phone: String (до 13 знаков)
+  - email: String
+  - createdAt: LocalDateTime
+  - updatedAt: LocalDateTime
+  --
+  + onCreate() : void
+  + onUpdate() : void
+}
+
+class Document {
+  ..
+  Основные атрибуты
+  ..
+  - id: Long (PK)
+  - originalFileName: String
+  - fileId: String (unique, UUID)
+  - storagePath: String
+  - fileSize: Long
+  - documentType: DocumentType
+  - status: ProcessingStatus
+  - documentNumber: String
+  - documentDate: LocalDate
+  - totalAmount: BigDecimal
+  - extractedText: String (TEXT)
+  - rawMlResponse: String (TEXT)
+  - errorMessage: String (TEXT)
+  - createdAt: LocalDateTime
+  - processedAt: LocalDateTime
+  --
+  + markProcessed() : void
+  + markError(String) : void
+  + onCreate() : void
+}
+
+' ========== ПЕРЕЧИСЛЕНИЯ ==========
+
+enum DocumentType {
+  ..
+  Типы документов
+  ..
+  INVOICE
+  ACT
+  DELIVERY_NOTE
+  CONTRACT
+  UNKNOWN
+  --
+  + getDescription() : String
+}
+
+enum ProcessingStatus {
+  ..
+  Статусы обработки
+  ..
+  UPLOADED
+  OCR_IN_PROGRESS
+  ML_PROCESSING
+  PROCESSED
+  VALIDATION_FAILED
+  PROCESSED_WITH_WARNINGS
+  ERROR
+  --
+  + getDescription() : String
+}
+
+' ========== СВЯЗИ ==========
+
+' Один Counterparty может иметь много документов
+Counterparty "1" -- "0..*" Document : содержит
+
+' Много документов ссылаются на одного контрагента
+Document "0..*" -- "1" Counterparty : принадлежит
+
+' Документ использует перечисление типов
+Document --> DocumentType : использует
+
+' Документ имеет статус обработки
+Document --> ProcessingStatus : имеет
+
+' ========== ПРИМЕЧАНИЯ ==========
+
+note top of Counterparty
+  <b>Примечания:</b>
+  • ИНН – уникальный, 10 или 12 цифр
+  • КПП – 9 цифр
+  • Поля createdAt/updatedAt заполняются автоматически
+end note
+
+note top of Document
+  <b>Примечания:</b>
+  • fileId – уникальный UUID, генерируется при загрузке
+  • extractedText – сырой текст после OCR
+  • rawMlResponse – ответ от ML-сервиса (JSON)
+  • При создании статус устанавливается UPLOADED
+end note
+
+note bottom of DocumentType
+  Возможные типы документов,
+  определяемые правилами классификации
+  (ключевые слова, ML)
+end note
+
+note bottom of ProcessingStatus
+  Жизненный цикл обработки документа:
+  Загружен → OCR → ML → Обработан/Ошибка
+end note
+
+@enduml

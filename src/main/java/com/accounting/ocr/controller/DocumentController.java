@@ -1,6 +1,7 @@
 package com.accounting.ocr.controller;
-
 import com.accounting.ocr.dto.DocumentResponse;
+import com.accounting.ocr.model.Counterparty;
+import com.accounting.ocr.repository.CounterpartyRepository;
 import com.accounting.ocr.service.DocumentProcessingService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -24,6 +25,11 @@ public class DocumentController {
 
     private final DocumentProcessingService processingService;
 
+    @GetMapping("/test")
+    public String test() {
+        return "Application is running!";
+    }
+
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Upload and process a document", description = "Uploads a document (PDF or image) and processes it with ML service")
     @ApiResponses(value = {
@@ -32,6 +38,8 @@ public class DocumentController {
             @ApiResponse(responseCode = "413", description = "File too large"),
             @ApiResponse(responseCode = "503", description = "ML service unavailable")
     })
+
+
     public ResponseEntity<DocumentResponse> uploadDocument(
             @Parameter(description = "Document file (PDF or image)", required = true)
             @RequestParam("file") MultipartFile file,

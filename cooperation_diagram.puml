@@ -1,0 +1,24 @@
+@startuml
+!theme plain
+title "Диаграмма кооперации – обработка документа"
+
+object ":DocumentController"
+object ":DocumentProcessingService"
+object ":FileStorageService"
+object ":MLServiceClient"
+object ":MLService (Python)"
+object ":DocumentRepository"
+object ":CounterpartyRepository"
+
+:DocumentController -> :DocumentProcessingService: 1: processDocument(file)
+:DocumentProcessingService -> :FileStorageService: 2: storeFile(file)
+:FileStorageService --> :DocumentProcessingService: 3: fileId
+:DocumentProcessingService -> :DocumentRepository: 4: save(initialDocument)
+:DocumentProcessingService -> :MLServiceClient: 5: classifyDocument(fileId)
+:MLServiceClient -> :MLService (Python): 6: POST /classify
+:MLService (Python) --> :MLServiceClient: 7: MLResponse
+:MLServiceClient --> :DocumentProcessingService: 8: MLResponse
+:DocumentProcessingService -> :DocumentRepository: 9: updateDocument(extractedData)
+:DocumentProcessingService -> :CounterpartyRepository: 10: findOrCreate(inn)
+:DocumentProcessingService -> :DocumentRepository: 11: finalSave()
+@enduml

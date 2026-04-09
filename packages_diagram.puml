@@ -1,0 +1,111 @@
+@startuml
+!theme plain
+title "Диаграмма пакетов проекта (Java + Python)"
+
+' === Java модуль (Spring Boot) ===
+package "Java: AccountingOcrApplication" {
+  package controller {
+    [DocumentController]
+  }
+
+  package service {
+    [DocumentProcessingService]
+    [FileStorageService]
+
+    package "ml" {
+      [MLServiceClient]
+      package "dto" {
+        [MLRequest]
+        [MLResponse]
+      }
+    }
+
+    package validation {
+      [ExtractedFieldsValidator]
+    }
+  }
+
+  package repository {
+    [DocumentRepository]
+    [CounterpartyRepository]
+  }
+
+  package model {
+    [Document]
+    [Counterparty]
+    [DocumentType]
+    [ProcessingStatus]
+  }
+
+  package dto {
+    [DocumentResponse]
+    [UploadDocumentRequest]
+    [ValidationError]
+  }
+
+  package config {
+    [RestTemplateConfig]
+    [StorageConfig]
+  }
+
+  package exception {
+    [DocumentProcessingException]
+    [MLServiceUnavailableException]
+    [GlobalExceptionHandler]
+  }
+}
+
+' === Python модуль (ML Service FastAPI) ===
+package "Python: ML Service" {
+  package core {
+    [ImagePreprocessor]
+    [OCREngine]
+    [DocumentClassifier]
+    [FieldExtractor]
+  }
+
+  package models {
+    [document_types (DocumentType enum)]
+    [KEYWORDS_MAP]
+  }
+
+  [app.py (FastAPI endpoints)]
+}
+
+' === Внешние системы ===
+package "External" {
+  database "PostgreSQL" as DB
+  [File System] as FS
+  [Tesseract OCR] as Tesseract
+  [OpenCV] as OpenCV
+}
+
+' === Зависимости внутри Java ===
+controller --> service : uses
+service --> repository : uses
+service --> model : uses
+service --> dto : uses
+service --> exception : throws
+service --> config : uses
+service.ml --> service.ml.dto : uses
+service.validation --> service.ml.dto : uses
+
+repository --> model : uses
+exception --> dto : uses
+
+' === Зависимости Java -> Python ===
+service.ml --> "Python: ML Service" : HTTP REST (POST /classify)
+
+' === Зависимости Python ===
+app.py --> core : uses
+app.py --> models : uses
+core --> models : uses
+core --> OpenCV : uses (cv2)
+core --> Tesseract : uses (pytesseract)
+
+' === Зависимости Java к внешним ===
+service --> FS : stores files
+repository --> DB : JPA
+config --> FS : initializes upload dir
+
+@enduml

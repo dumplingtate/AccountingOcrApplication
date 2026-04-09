@@ -52,6 +52,7 @@ public class Document {
     @JoinColumn(name = "counterparty_id")
     private Counterparty counterparty;
 
+    @Column(columnDefinition = "TEXT")
     private String errorMessage;
 
     @Column(name = "created_at")

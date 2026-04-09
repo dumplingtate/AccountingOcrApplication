@@ -66,15 +66,20 @@ public class DocumentProcessingService {
 
         // Step 4: Validate extracted data
         if (mlResponse != null) {
+            // Вместо того чтобы бросать исключение, просто логируем ошибки и продолжаем
             List<ValidationError> validationErrors = fieldsValidator.validate(mlResponse);
-
             if (!validationErrors.isEmpty()) {
-                log.warn("Validation failed for document {}. Errors: {}", fileId, validationErrors);
-                document.setStatus(ProcessingStatus.VALIDATION_FAILED);
-                document.setErrorMessage("Validation failed: " + validationErrors.toString());
-                documentRepository.save(document);
-                throw new DocumentProcessingException("Validation failed: " + validationErrors);
+                log.warn("Validation warnings: {}", validationErrors);
+                // Не бросаем исключение, а сохраняем документ с предупреждениями
+                document.setStatus(ProcessingStatus.PROCESSED_WITH_WARNINGS);
+                document.setErrorMessage("Validation warnings: " + validationErrors.toString());
             }
+            String errorMsg = validationErrors.toString();
+            if (errorMsg.length() > 1000) {
+                errorMsg = errorMsg.substring(0, 1000);
+            }
+            document.setErrorMessage(errorMsg);
+// Продолжаем сохранение
 
             // Step 5: Find or create counterparty
             Counterparty counterparty = findOrCreateCounterparty(mlResponse);

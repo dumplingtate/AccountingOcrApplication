@@ -1,0 +1,76 @@
+@startuml
+title "Диаграмма последовательности (абстрактная) – обработка документа"
+
+actor "Пользователь" as User
+participant "Веб-интерфейс" as WebUI
+participant "Сервис обработки" as Processing
+participant "ML-сервис" as ML
+participant "База данных" as DB
+
+User -> WebUI: загрузить документ(файл)
+activate WebUI
+
+WebUI -> Processing: отправить на обработку(файл)
+activate Processing
+
+Processing -> DB: сохранить запись(статус: ЗАГРУЖЕН)
+activate DB
+DB --> Processing: подтверждение
+deactivate DB
+
+Processing -> ML: запросить распознавание(изображение)
+activate ML
+
+ML -> ML: предобработать изображение()
+ML -> ML: распознать текст(OCR)
+ML -> ML: классифицировать тип()
+ML -> ML: извлечь реквизиты()
+
+ML --> Processing: результат(тип, поля, текст)
+deactivate ML
+
+Processing -> Processing: валидировать данные()
+
+alt валидация успешна
+    Processing -> DB: найти контрагента(ИНН)
+    activate DB
+    DB --> Processing: контрагент (или null)
+    deactivate DB
+
+    alt контрагент не найден
+        Processing -> DB: создать контрагента()
+        activate DB
+        DB --> Processing: контрагент создан
+        deactivate DB
+    end
+
+    Processing -> DB: обновить документ(статус: ОБРАБОТАН, поля)
+    activate DB
+    DB --> Processing: подтверждение
+    deactivate DB
+
+    Processing --> WebUI: успех(данные документа)
+else валидация не пройдена
+    Processing -> DB: обновить документ(статус: ОШИБКА, сообщение)
+    activate DB
+    DB --> Processing: подтверждение
+    deactivate DB
+
+    Processing --> WebUI: ошибка валидации
+end
+
+deactivate Processing
+
+WebUI --> User: показать результат
+deactivate WebUI
+
+loop пакетная обработка нескольких документов
+    User -> WebUI: загрузить пакет файлов
+    WebUI -> Processing: обработать пакет()
+    Processing -> ML: для каждого файла...
+    note right: аналогично одиночной обработке
+    Processing --> WebUI: массив результатов
+    WebUI --> User: отобразить сводку
+end
+
+@enduml

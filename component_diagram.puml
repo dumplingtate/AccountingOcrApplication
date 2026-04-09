@@ -1,0 +1,99 @@
+@startuml
+!theme plain
+title "Диаграмма компонентов системы распознавания и классификации документов"
+
+' Определение компонентов и интерфейсов
+
+package "AccountingOcrApplication (Spring Boot)" {
+  [Web API Controller] as Controller
+  [Document Processing Service] as ProcessingService
+  [File Storage Service] as FileStorage
+  [ML Service Client] as MLClient
+  [Extracted Fields Validator] as Validator
+  [Document Repository] as DocRepo
+  [Counterparty Repository] as CpRepo
+  [Exception Handler] as ExceptionHandler
+  [Configuration] as Config
+}
+
+package "База данных" {
+  database "PostgreSQL" as DB
+}
+
+package "ML Service (FastAPI)" {
+  component "Image Preprocessor" as ImagePrep
+  component "OCR Engine (Tesseract)" as OCREngine
+  component "Document Classifier" as Classifier
+  component "Field Extractor" as Extractor
+  component "REST API (/classify, /health)" as MLAPI
+  note right of MLAPI : порт 5001
+}
+
+package "Внешние системы" {
+  [Файловая система] as FileSystem
+  [Tesseract OCR] as Tesseract
+  [OpenCV] as OpenCV
+}
+
+' Интерфейсы
+
+() "REST /classify" as MLInterface
+() "JPA Repository" as JPAList
+
+' Связи компонентов
+
+Controller --> ProcessingService : "delegates"
+ProcessingService --> FileStorage : "uses"
+ProcessingService --> MLClient : "calls"
+ProcessingService --> Validator : "uses"
+ProcessingService --> DocRepo : "uses"
+ProcessingService --> CpRepo : "uses"
+
+FileStorage --> FileSystem : "reads/writes"
+
+MLClient ..> MLInterface : "HTTP POST"
+MLInterface ..> MLAPI
+
+MLAPI --> ImagePrep : "uses"
+MLAPI --> OCREngine : "uses"
+MLAPI --> Classifier : "uses"
+MLAPI --> Extractor : "uses"
+
+ImagePrep --> OpenCV : "native calls"
+OCREngine --> Tesseract : "subprocess calls"
+
+DocRepo ..> JPAList
+CpRepo ..> JPAList
+JPAList --> DB : "JDBC"
+
+ExceptionHandler <.. Controller : "handles exceptions"
+ExceptionHandler <.. ProcessingService : "handles"
+Config --> DocRepo : "configures"
+Config --> CpRepo : "configures"
+
+' Примечания
+note top of Controller
+  FastAPI эндпоинты:
+  - POST /classify
+  - POST /classify/batch
+  - GET /health
+  - GET /stats
+end note
+
+note top of ProcessingService
+  Координирует полный процесс:
+  1. сохранение файла
+  2. вызов ML сервиса
+  3. валидация данных
+  4. сохранение в БД
+end note
+
+note right of MLAPI
+  Компоненты ML сервиса:
+  - предобработка изображения
+  - OCR (Tesseract с PSM 3,4,6,8,12)
+  - классификация (rule‑based + ML)
+  - извлечение полей (регулярные выражения)
+end note
+
+@enduml

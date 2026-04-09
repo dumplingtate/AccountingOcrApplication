@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>OCR Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="login-page" class="center">
+    <div class="card login">
+        <h1>OCR System</h1>
+        <input id="login" placeholder="Логин">
+        <input id="password" type="password" placeholder="Пароль">
+        <button onclick="login()">Войти</button>
+        <p id="error"></p>
+    </div>
+</div>
+
+<div id="app" class="hidden">
+
+    <aside class="sidebar">
+        <h2>OCR</h2>
+        <p>Загрузка документов</p>
+    </aside>
+
+    <main class="main">
+
+        <div class="topbar">
+            <h1>Обработка документа</h1>
+        </div>
+
+        <div class="content">
+
+            <div class="card upload">
+                <h3>Загрузить файл</h3>
+                <input type="file" id="fileInput">
+                <button onclick="upload()">Отправить</button>
+                <p id="status"></p>
+            </div>
+
+            <div class="card result">
+                <h3>Результат</h3>
+
+                <div class="result-grid">
+                    <div><b>ID:</b> <span id="id">-</span></div>
+                    <div><b>Файл:</b> <span id="filename">-</span></div>
+                    <div><b>Тип:</b> <span id="type">-</span></div>
+                    <div><b>Уверенность:</b> <span id="confidence">-</span></div>
+                    <div><b>Дата:</b> <span id="date">-</span></div>
+                    <div><b>Сумма:</b> <span id="amount">-</span></div>
+                    <div><b>ИНН:</b> <span id="inn">-</span></div>
+                </div>
+
+                <pre id="raw"></pre>
+            </div>
+
+        </div>
+
+    </main>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

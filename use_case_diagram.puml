@@ -1,0 +1,126 @@
+@startuml
+left to right direction
+skinparam actorStyle awesome
+skinparam usecase {
+  BackgroundColor #LightYellow
+  BorderColor #Black
+  FontSize 12
+}
+skinparam note {
+  BackgroundColor #LightBlue
+  BorderColor #DarkBlue
+}
+
+title "Диаграмма прецедентов системы распознавания и классификации документов"
+
+' Актеры
+actor "Пользователь\n(Бухгалтер, Оператор)" as User
+actor "Администратор" as Admin
+
+' Система
+rectangle "Система обработки документов" {
+
+  ' Основные прецеденты
+  usecase "Загрузить документ\n(изображение или PDF)" as UC_Upload
+  usecase "Обработать документ\n(полный цикл)" as UC_Process
+  usecase "Распознать текст (OCR)\nс использованием Tesseract" as UC_OCR
+  usecase "Предобработать изображение\n(повышение контраста, бинаризация,\nмасштабирование, шумоподавление)" as UC_Preprocess
+  usecase "Классифицировать тип документа\n(счет, акт, накладная, договор)" as UC_Classify
+  usecase "Извлечь реквизиты\n(номер, дата, сумма, НДС,\nконтрагент, ИНН, КПП)" as UC_Extract
+  usecase "Валидировать извлечённые данные\n(форматы ИНН/КПП, обязательные поля)" as UC_Validate
+  usecase "Сохранить документ в БД\n(Document, Counterparty)" as UC_Save
+  usecase "Просмотреть документ\n(с реквизитами и статусом)" as UC_View
+  usecase "Просмотреть список документов\n(с фильтрацией и пагинацией)" as UC_List
+  usecase "Обновить документ\n(скорректировать поля)" as UC_Update
+  usecase "Удалить документ" as UC_Delete
+  usecase "Обработать пакет документов\n(множественная загрузка)" as UC_Batch
+  usecase "Получить статистику работы\n(статус компонентов, кол-во обработанных)" as UC_Stats
+  usecase "Проверить работоспособность\n(health check)" as UC_Health
+  usecase "Включить режим отладки\n(сохранение промежуточных изображений,\nвывод сырого текста)" as UC_Debug
+  usecase "Получить исходный текст OCR\n(возврат распознанного текста)" as UC_RawText
+
+  ' Связи include/extend
+  UC_Process .> UC_OCR : <<include>>
+  UC_OCR .> UC_Preprocess : <<include>>
+  UC_Process .> UC_Classify : <<include>>
+  UC_Process .> UC_Extract : <<include>>
+  UC_Extract ..> UC_Validate : <<extend>>
+  UC_Process .> UC_Save : <<include>>
+  UC_Upload .> UC_Process : <<include>>
+  UC_Batch .> UC_Process : <<include>>
+  UC_Upload ..> UC_Debug : <<extend>>
+  UC_Process ..> UC_RawText : <<extend>>
+}
+
+' Связи актеров
+User --> UC_Upload
+User --> UC_View
+User --> UC_List
+User --> UC_Update
+User --> UC_Delete
+User --> UC_Batch
+Admin --> UC_Stats
+Admin --> UC_Health
+
+' Примечания с деталями
+note right of UC_Preprocess
+  Методы: адаптивная бинаризация,
+  Otsu, нормализация, Canny edge
+  для выбора лучшего результата.
+  Увеличение разрешения при
+  необходимости.
+end note
+
+note right of UC_OCR
+  Используется Tesseract с режимами
+  PSM 6,3,4,8,12, выбор лучшего
+  по средней уверенности.
+  Языки: русский + английский.
+end note
+
+note right of UC_Classify
+  Rule‑based классификация по
+  ключевым словам (KEYWORDS_MAP).
+  Возвращает тип документа и
+  уверенность (confidence).
+  Заготовка для ML‑модели (TF‑IDF).
+end note
+
+note right of UC_Extract
+  Извлечение полей по приоритетным
+  и общим регулярным выражениям.
+  Обработка переносов строк в дате,
+  поиск покупателя, ИНН, КПП,
+  сумм (с учётом НДС).
+end note
+
+note right of UC_Validate
+  Проверка ИНН (10 или 12 цифр),
+  КПП (9 цифр), формата даты,
+  неотрицательности сумм.
+  Выполняется после извлечения.
+end note
+
+note right of UC_Save
+  Сохранение сущностей Document
+  (тип, статус, поля) и Counterparty
+  (наименование, ИНН, КПП).
+  Используются Spring Data JPA
+  репозитории.
+end note
+
+note right of UC_Batch
+  POST /classify/batch – принимает
+  несколько файлов, обрабатывает
+  каждый, возвращает массив
+  результатов с указанием статуса.
+end note
+
+note right of UC_Debug
+  При включении флага debug:
+  сохраняются оригинальное и
+  обработанное изображения,
+  в лог выводится полный текст OCR.
+end note
+
+@enduml

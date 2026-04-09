@@ -1,0 +1,34 @@
+@startuml
+title "Диаграмма состояний документа"
+
+[*] --> UPLOADED : Загрузка файла
+
+UPLOADED --> ML_PROCESSING : Отправка в ML-сервис
+
+ML_PROCESSING --> PROCESSED : Успешная обработка\n(данные валидны)
+ML_PROCESSING --> PROCESSED_WITH_WARNINGS : Данные извлечены,\nно есть предупреждения\n(ИНН не найден, низкая confidence)
+ML_PROCESSING --> VALIDATION_FAILED : Критические ошибки валидации
+ML_PROCESSING --> ERROR : Ошибка ML-сервиса\n(таймаут, недоступен)
+
+PROCESSED --> [*]
+PROCESSED_WITH_WARNINGS --> [*]
+VALIDATION_FAILED --> [*]
+ERROR --> [*]
+
+note right of UPLOADED
+  Статус присваивается
+  после сохранения файла
+end note
+
+note right of ML_PROCESSING
+  Система ожидает ответа
+  от FastAPI-сервиса
+end note
+
+note bottom of PROCESSED_WITH_WARNINGS
+  Например: отсутствует ИНН,
+  дата в будущем,
+  низкая уверенность (<0.6)
+end note
+
+@enduml

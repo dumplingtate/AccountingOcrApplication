@@ -1,0 +1,38 @@
+@startuml
+!theme plain
+title "Архитектура информационной системы (микросервисная)"
+
+left to right direction
+
+node "Клиент" {
+  [Пользователь]
+}
+
+node "API Gateway (Spring Boot)" {
+  [REST API]
+  [Балансировщик (опционально)]
+}
+
+node "Сервис обработки документов (Java)" {
+  [DocumentProcessingService]
+  [FileStorageService]
+  [MLServiceClient]
+}
+
+node "Сервис распознавания (Python)" {
+  [FastAPI]
+  [OCR Engine]
+  [Classifier]
+  [Extractor]
+}
+
+database "PostgreSQL" as DB
+database "Файловое хранилище" as FS
+
+Пользователь --> "REST API" : HTTP
+"REST API" --> "Сервис обработки документов (Java)"
+"Сервис обработки документов (Java)" --> "Сервис распознавания (Python)" : HTTP
+"Сервис обработки документов (Java)" --> DB : JDBC
+"Сервис обработки документов (Java)" --> FS : I/O
+"Сервис распознавания (Python)" --> FS : читает файл
+@enduml

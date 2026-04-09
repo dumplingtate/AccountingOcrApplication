@@ -20,63 +20,41 @@ public class ExtractedFieldsValidator {
     public List<ValidationError> validate(MLResponse mlResponse) {
         List<ValidationError> errors = new ArrayList<>();
 
-        // Validate document type
+        // Не блокируем, если тип не определён — просто предупреждение
         if (mlResponse.getDocumentType() == null) {
-            errors.add(new ValidationError("documentType", "Document type could not be determined"));
+            errors.add(new ValidationError("documentType", "Document type not determined (will be set to UNKNOWN)"));
         }
 
-        // Validate confidence
+        // Не блокируем из-за низкой confidence
         if (mlResponse.getConfidence() != null && mlResponse.getConfidence() < 0.6) {
-            errors.add(new ValidationError("confidence",
-                    String.format("Low recognition confidence: %.2f", mlResponse.getConfidence())));
+            errors.add(new ValidationError("confidence", "Low recognition confidence: " + mlResponse.getConfidence()));
         }
 
-        // Validate document number
-        if (mlResponse.getDocumentNumber() != null && !mlResponse.getDocumentNumber().isEmpty()) {
-            if (!DOCUMENT_NUMBER_PATTERN.matcher(mlResponse.getDocumentNumber()).matches()) {
-                errors.add(new ValidationError("documentNumber",
-                        "Document number contains invalid characters"));
-            }
-        } else {
-            errors.add(new ValidationError("documentNumber", "Document number is missing"));
+        // Номер документа — не обязателен
+        if (mlResponse.getDocumentNumber() == null || mlResponse.getDocumentNumber().isEmpty()) {
+            errors.add(new ValidationError("documentNumber", "Document number missing (will be set to 'UNKNOWN')"));
         }
 
-        // Validate date
-        if (mlResponse.getDocumentDate() != null) {
-            LocalDate now = LocalDate.now();
-            if (mlResponse.getDocumentDate().isAfter(now)) {
-                errors.add(new ValidationError("documentDate", "Document date cannot be in the future"));
-            }
-            if (mlResponse.getDocumentDate().isBefore(now.minusYears(5))) {
-                errors.add(new ValidationError("documentDate", "Document is too old (>5 years)"));
-            }
-        } else {
-            errors.add(new ValidationError("documentDate", "Document date is missing"));
+        // Дата — не обязательна
+        if (mlResponse.getDocumentDate() == null) {
+            errors.add(new ValidationError("documentDate", "Document date missing (will be set to current date)"));
+        } else if (mlResponse.getDocumentDate().isAfter(LocalDate.now())) {
+            errors.add(new ValidationError("documentDate", "Future date, but will be accepted"));
         }
 
-        // Validate amount
-        if (mlResponse.getTotalAmount() != null) {
-            if (mlResponse.getTotalAmount().compareTo(BigDecimal.ZERO) <= 0) {
-                errors.add(new ValidationError("totalAmount", "Amount must be greater than zero"));
-            }
-            if (mlResponse.getTotalAmount().compareTo(new BigDecimal("999999999.99")) > 0) {
-                errors.add(new ValidationError("totalAmount", "Amount exceeds maximum allowed value"));
-            }
-        } else {
-            errors.add(new ValidationError("totalAmount", "Amount is missing"));
+        // Сумма — не обязательна
+        if (mlResponse.getTotalAmount() == null) {
+            errors.add(new ValidationError("totalAmount", "Amount missing (will be set to 0)"));
+        } else if (mlResponse.getTotalAmount().compareTo(BigDecimal.ZERO) <= 0) {
+            errors.add(new ValidationError("totalAmount", "Amount is zero or negative, but will be accepted"));
         }
 
-        // Validate INN
-        if (mlResponse.getCounterpartyInn() != null && !mlResponse.getCounterpartyInn().isEmpty()) {
-            if (!INN_PATTERN.matcher(mlResponse.getCounterpartyInn()).matches()) {
-                errors.add(new ValidationError("counterpartyInn",
-                        "INN must be 10 or 12 digits"));
-            }
-        } else {
-            errors.add(new ValidationError("counterpartyInn", "Counterparty INN is missing"));
+        // ИНН — не обязателен
+        if (mlResponse.getCounterpartyInn() == null || mlResponse.getCounterpartyInn().isEmpty()) {
+            errors.add(new ValidationError("counterpartyInn", "INN missing (counterparty will be created without INN)"));
         }
 
-        log.info("Validation completed. Found {} errors", errors.size());
+        // Возвращаем список ошибок, но не бросаем исключение
         return errors;
     }
 

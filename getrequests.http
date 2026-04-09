@@ -1,0 +1,5 @@
+### Получить все документы
+GET http://localhost:8080/api/documents
+
+### Получить документ по ID (замените 1 на реальный ID)
+GET http://localhost:8080/api/documents/1

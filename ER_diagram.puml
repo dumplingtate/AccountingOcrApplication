@@ -1,0 +1,56 @@
+@startuml
+!theme plain
+title "ER-диаграмма базы данных"
+
+entity "documents" as documents {
+  * id : BIGINT <<PK>>
+  --
+  * original_file_name : VARCHAR(255) <<NOT NULL>>
+  * file_id : VARCHAR(255) <<NOT NULL, UNIQUE>>
+  * storage_path : VARCHAR(255) <<NOT NULL>>
+  file_size : BIGINT
+  document_type : VARCHAR(50)
+  status : VARCHAR(50)
+  document_number : VARCHAR(100)
+  document_date : DATE
+  total_amount : DECIMAL(15,2)
+  extracted_text : TEXT
+  raw_ml_response : TEXT
+  error_message : TEXT
+  created_at : TIMESTAMP
+  processed_at : TIMESTAMP
+  counterparty_id : BIGINT <<FK>>
+}
+
+entity "counterparties" as counterparties {
+  * id : BIGINT <<PK>>
+  --
+  inn : VARCHAR(12) <<UNIQUE>>
+  kpp : VARCHAR(9)
+  name : VARCHAR(255)
+  legal_address : VARCHAR(500)
+  phone : VARCHAR(13)
+  email : VARCHAR(100)
+  created_at : TIMESTAMP
+  updated_at : TIMESTAMP
+}
+
+documents ||--o{ counterparties : "counterparty_id (many-to-one)"
+
+note right of documents
+  status может быть:
+  - UPLOADED
+  - OCR_IN_PROGRESS
+  - ML_PROCESSING
+  - PROCESSED
+  - VALIDATION_FAILED
+  - PROCESSED_WITH_WARNINGS
+  - ERROR
+end note
+
+note left of counterparties
+  ИНН уникален (10 или 12 цифр)
+  КПП – 9 цифр (может быть null)
+end note
+
+@enduml

@@ -1,0 +1,50 @@
+@startuml
+!theme plain
+title "Структурная схема ПО"
+
+package "Клиентский уровень" {
+  [HTTP клиент (Postman, браузер)]
+  [Интеграционный модуль учётной системы]
+}
+
+package "Уровень сервера приложений (Java Spring Boot)" {
+  [Контроллеры (DocumentController)]
+  [Сервисы (DocumentProcessingService, FileStorageService, MLServiceClient)]
+  [Репозитории (DocumentRepository, CounterpartyRepository)]
+  [Валидатор (ExtractedFieldsValidator)]
+  [DTO]
+}
+
+package "Уровень ML-сервиса (Python FastAPI)" {
+  [API эндпоинты (/classify, /health)]
+  [ImagePreprocessor]
+  [OCREngine (Tesseract)]
+  [DocumentClassifier]
+  [FieldExtractor]
+}
+
+package "Уровень данных" {
+  database "PostgreSQL" as DB
+  [Файловое хранилище (uploads/)]
+}
+
+package "Внешние библиотеки" {
+  [OpenCV]
+  [Tesseract OCR]
+}
+
+HTTP клиент --> Контроллеры : HTTP/REST
+Интеграционный модуль --> Контроллеры : HTTP/REST
+Контроллеры --> Сервисы : вызов
+Сервисы --> Репозитории : JPA
+Сервисы --> Валидатор : вызов
+Сервисы --> "ML-сервис" : HTTP (RestTemplate)
+Репозитории --> DB : JDBC
+Сервисы --> Файловое хранилище : чтение/запись
+"ML-сервис" --> ImagePreprocessor
+"ML-сервис" --> OCREngine
+"ML-сервис" --> DocumentClassifier
+"ML-сервис" --> FieldExtractor
+OCREngine --> Tesseract OCR : subprocess
+ImagePreprocessor --> OpenCV : cv2.*
+@enduml

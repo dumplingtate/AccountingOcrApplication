@@ -1,0 +1,19 @@
+@startuml
+!theme plain
+title "DFD контекстного уровня"
+
+actor "Пользователь" as User
+actor "Администратор" as Admin
+
+rectangle "Система распознавания документов" {
+  process "Обработка документа" as P1
+  data store "Документы и контрагенты" as DS1
+}
+
+User --> P1 : файл, параметры
+P1 --> User : результат (JSON)
+Admin --> P1 : запрос статистики, отладка
+P1 --> Admin : статус, логи
+P1 --> DS1 : запись/чтение
+DS1 --> P1 : данные
+@enduml

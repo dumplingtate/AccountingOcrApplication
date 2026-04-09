@@ -1,0 +1,100 @@
+body {
+    margin: 0;
+    font-family: system-ui;
+    background: #E5D9F2;
+}
+
+.center {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+/* Layout */
+#app {
+    display: flex;
+    height: 100vh;
+}
+
+.sidebar {
+    width: 220px;
+    background: #7371FC;
+    color: white;
+    padding: 20px;
+}
+
+.main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.topbar {
+    background: #F5EFFF;
+    padding: 15px;
+    border-bottom: 1px solid #CDC1FF;
+}
+
+.content {
+    display: flex;
+    gap: 20px;
+    padding: 20px;
+}
+
+/* Cards */
+.card {
+    background: #F5EFFF;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.upload {
+    width: 300px;
+}
+
+.result {
+    flex: 1;
+}
+
+.result-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin: 10px 0;
+}
+
+input {
+    width: 100%;
+    padding: 10px;
+    margin: 5px 0;
+    border-radius: 8px;
+    border: 1px solid #CDC1FF;
+}
+
+button {
+    width: 100%;
+    padding: 10px;
+    background: #A594F9;
+    border: none;
+    border-radius: 8px;
+    color: white;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #7371FC;
+}
+
+.hidden {
+    display: none;
+}
+
+pre {
+    background: #CDC1FF;
+    padding: 10px;
+    border-radius: 8px;
+    max-height: 200px;
+    overflow: auto;
+}

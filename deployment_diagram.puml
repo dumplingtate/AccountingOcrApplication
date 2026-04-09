@@ -1,0 +1,87 @@
+@startuml
+!theme plain
+title "Диаграмма развертывания системы распознавания документов"
+
+' Узлы (ноды)
+node "Клиент (Пользователь)" as Client {
+  [Веб-браузер]
+  [REST клиент (Postman/curl)]
+}
+
+node "Сервер приложений\n(Java Spring Boot)" as JavaServer {
+  artifact "AccountingOcrApplication.jar" as JavaApp
+  component "DocumentController" as Controller
+  component "DocumentProcessingService" as ProcService
+  component "FileStorageService" as FileStorage
+  component "MLServiceClient" as MLClient
+  component "ExtractedFieldsValidator" as Validator
+  component "DocumentRepository" as DocRepo
+  component "CounterpartyRepository" as CpRepo
+
+  JavaApp -- Controller
+  Controller -- ProcService
+  ProcService -- FileStorage
+  ProcService -- MLClient
+  ProcService -- Validator
+  ProcService -- DocRepo
+  ProcService -- CpRepo
+}
+
+node "Сервер ML-сервиса\n(Python FastAPI)" as MLServer {
+  artifact "ml_service.py" as MLApp
+  component "ImagePreprocessor" as Preproc
+  component "OCREngine" as OCR
+  component "DocumentClassifier" as Classifier
+  component "FieldExtractor" as Extractor
+
+  MLApp -- Preproc
+  MLApp -- OCR
+  MLApp -- Classifier
+  MLApp -- Extractor
+}
+
+node "Сервер базы данных\n(PostgreSQL)" as DBServer {
+  database "postgres" as DB {
+    artifact "documents"
+    artifact "counterparties"
+  }
+}
+
+node "Файловое хранилище" as FileStorageNode {
+  folder "uploads/"
+}
+
+node "Внешние библиотеки" as ExtLibs {
+  [Tesseract OCR]
+  [OpenCV]
+}
+
+' Связи между узлами
+Client --> JavaServer : HTTP (REST API)
+JavaServer --> MLServer : HTTP (POST /classify)
+JavaServer --> DBServer : JDBC
+JavaServer --> FileStorageNode : read/write files
+MLServer --> ExtLibs : native calls (subprocess)
+
+' Стереотипы и примечания
+note top of JavaServer
+  Работает на порту 8080 (по умолчанию)
+  Зависит от окружения: JVM 17+
+end note
+
+note top of MLServer
+  Работает на порту 5001
+  Зависит от: Python 3.8+, Tesseract, OpenCV
+end note
+
+note right of DBServer
+  Используется PostgreSQL
+  Таблицы: documents, counterparties
+end note
+
+note bottom of FileStorageNode
+  Физический путь: ./uploads
+  Сохраняются оригиналы загруженных файлов
+end note
+
+@enduml

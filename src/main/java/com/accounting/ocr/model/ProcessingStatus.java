@@ -6,6 +6,7 @@ public enum ProcessingStatus {
     ML_PROCESSING("ML обработка"),
     PROCESSED("Обработан"),
     VALIDATION_FAILED("Ошибка валидации"),
+    PROCESSED_WITH_WARNINGS("Обработано с варнингами"),
     ERROR("Ошибка обработки");
 
     private final String description;

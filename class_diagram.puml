@@ -1,0 +1,143 @@
+@startuml
+!theme plain
+skinparam class {
+  BackgroundColor White
+  BorderColor Black
+  ArrowColor Black
+}
+skinparam enum {
+  BackgroundColor LightYellow
+  BorderColor Black
+}
+skinparam interface {
+  BackgroundColor LightCyan
+  BorderColor Black
+}
+title "Диаграмма классов – ML сервис (Python) и его связь с Java модулем"
+
+' ========== Пакеты ==========
+package "Python ML Service (FastAPI)" {
+
+  ' ---------- Вспомогательные классы ----------
+  class ImagePreprocessor {
+    + preprocess(image_bytes: bytes) : np.ndarray
+    -- статические методы --
+    + _select_best_method(results: list) : np.ndarray
+  }
+  note right: Использует OpenCV (cv2),\nnumpy. Выбирает лучший\nметод бинаризации.
+
+  class OCREngine {
+    - config: str
+    - languages: str
+    + __init__(config: Optional[str])
+    + extract_text(image: np.ndarray) : str
+    + image_to_string_debug(image: np.ndarray) : Dict
+    - _clean_text(text: str) : str
+  }
+  note right: Использует pytesseract.\nПеребирает PSM режимы (6,3,4,8,12).
+
+  class DocumentClassifier {
+    - keywords_map: Dict
+    + __init__()
+    + classify(text: str) : Tuple[DocumentType, float]
+    + classify_with_ml(text: str) : Tuple[DocumentType, float]
+    - _calculate_score(text: str, keywords: list) : float
+  }
+  note right: Rule‑based классификация\nпо KEYWORDS_MAP. Заготовка\nдля ML (TF‑IDF).
+
+  class FieldExtractor {
+    - PRIORITY_PATTERNS: Dict
+    - GENERAL_PATTERNS: Dict
+    + extract_all_fields(text: str, doc_type: DocumentType) : Dict
+    - _extract_field(text: str, patterns: list, field_name: str) : Any
+    - _post_process_fields(fields: Dict, full_text: str) : Dict
+    - _convert_russian_date(date_str: str) : str
+    - _parse_date(date_str: str) : Optional[str]
+    - _parse_amount(amount_str: str) : Optional[float]
+  }
+  note right: Регулярные выражения для\nномера, даты, суммы, НДС,\nконтрагента, ИНН, КПП.
+
+  enum DocumentType {
+    INVOICE
+    ACT
+    DELIVERY_NOTE
+    CONTRACT
+    UNKNOWN
+  }
+  note bottom: Определяет типы документов.\nKEYWORDS_MAP – сопоставление\nключевых слов.
+
+  class KEYWORDS_MAP <<static>> {
+    - INVOICE: list
+    - ACT: list
+    - DELIVERY_NOTE: list
+    - CONTRACT: list
+  }
+
+  ' ---------- Основной класс API ----------
+  class FastAPIApp {
+    + app: FastAPI
+    + image_preprocessor: ImagePreprocessor
+    + ocr_engine: OCREngine
+    + document_classifier: DocumentClassifier
+    + field_extractor: FieldExtractor
+    + classify_document(file, file_id, return_full_text, debug) : ClassificationResponse
+    + classify_batch(files) : Dict
+    + health_check() : Dict
+    + get_stats() : Dict
+  }
+  note top: Эндпоинты:\nPOST /classify\nPOST /classify/batch\nGET /health\nGET /stats
+
+  class ClassificationResponse {
+    + document_type: DocumentType
+    + confidence: float
+    + document_number: Optional[str]
+    + document_date: Optional[str]
+    + total_amount: Optional[float]
+    + vat_amount: Optional[float]
+    + counterparty_name: Optional[str]
+    + counterparty_inn: Optional[str]
+    + counterparty_kpp: Optional[str]
+    + additional_fields: Dict
+    + raw_text: Optional[str]
+    + processing_time: str
+  }
+  note bottom: Pydantic модель ответа.
+
+  ' ---------- Зависимости ----------
+  FastAPIApp --> ImagePreprocessor
+  FastAPIApp --> OCREngine
+  FastAPIApp --> DocumentClassifier
+  FastAPIApp --> FieldExtractor
+  FastAPIApp ..> ClassificationResponse : создаёт
+  DocumentClassifier --> DocumentType
+  DocumentClassifier --> KEYWORDS_MAP
+  FieldExtractor --> DocumentType
+}
+
+' ========== Java модуль (только интерфейс) ==========
+package "Java Module (Spring Boot)" {
+  interface "REST Client" as JavaClient {
+    + POST /documents/upload
+    + GET /documents/{id}
+  }
+  note top: Вызывает ML сервис через\nHTTP multipart/form-data.
+}
+
+' ========== Связь между модулями ==========
+JavaClient ..> FastAPIApp : HTTP POST /classify\n(передаёт файл)
+FastAPIApp --> JavaClient : JSON (ClassificationResponse)
+
+' ========== Внешние библиотеки ==========
+node "External Libraries" {
+  [OpenCV] as cv2
+  [Tesseract OCR] as tesseract
+  [PIL] as PIL
+  [numpy] as np
+}
+ImagePreprocessor --> cv2
+OCREngine --> tesseract
+OCREngine --> PIL
+ImagePreprocessor --> np
+OCREngine --> np
+
+@enduml
